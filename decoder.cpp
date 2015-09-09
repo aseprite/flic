@@ -1,0 +1,304 @@
+// Aseprite FLIC Library
+// Copyright (c) 2015 David Capello
+//
+// This file is released under the terms of the MIT license.
+// Read LICENSE.txt for more information.
+
+#include "flic/flic.h"
+#include "flic/flic_details.h"
+
+#include <cassert>
+
+namespace flic {
+
+Decoder::Decoder(FileInterface* file)
+  : m_file(file)
+  , m_firstFrame(true)
+{
+}
+
+bool Decoder::readHeader(Header& header)
+{
+  uint32_t fileSize = read32();
+  uint16_t magic = read16();
+
+  assert(magic == FLI_MAGIC_NUMBER || magic == FLC_MAGIC_NUMBER);
+  if (magic != FLI_MAGIC_NUMBER &&
+      magic != FLC_MAGIC_NUMBER)
+    return false;
+
+  header.frames = read16();
+  header.width  = read16();
+  header.height = read16();
+  header.depth  = read16();
+  read32();                     // Skip flags
+  header.speed = read16();
+  if (magic == FLI_MAGIC_NUMBER)
+    header.speed = 1000 * header.speed / 70;
+
+  if (header.width == 0) header.width = 320;
+  if (header.height == 0) header.width = 200;
+
+  m_width = header.width;
+  m_height = header.height;
+
+  // Skip padding
+  m_file->seek(128);
+  return true;
+}
+
+bool Decoder::readFrame(Frame& frame)
+{
+  uint32_t frameStartPos = m_file->tell();
+  uint32_t frameSize = read32();
+  uint16_t magic = read16();
+  assert(magic == FLI_FRAME_MAGIC_NUMBER);
+
+  uint16_t chunks = read16();
+  for (int i=0; i<8; ++i)       // Padding
+    m_file->read8();
+
+  for (uint16_t i=0; i!=chunks; ++i)
+    readChunk(frame);
+
+  m_file->seek(frameStartPos+frameSize);
+  m_firstFrame = false;
+  return true;
+}
+
+void Decoder::readChunk(Frame& frame)
+{
+  uint32_t chunkStartPos = m_file->tell();
+  uint32_t chunkSize = read32();
+  uint16_t type = read16();
+
+  switch (type) {
+    case FLI_COLOR_256_CHUNK: readColorChunk(frame, false); break;
+    case FLI_DELTA_CHUNK:     readDeltaChunk(frame);        break;
+    case FLI_COLOR_64_CHUNK:  readColorChunk(frame, true);  break;
+    case FLI_LC_CHUNK:        readLcChunk(frame);           break;
+    case FLI_BLACK_CHUNK:     readBlackChunk(frame);        break;
+    case FLI_BRUN_CHUNK:      readBrunChunk(frame);         break;
+    case FLI_COPY_CHUNK:      readCopyChunk(frame);         break;
+    default:
+      // Ignore all other kind of chunks
+      break;
+  }
+
+  m_file->seek(chunkStartPos+chunkSize);
+}
+
+void Decoder::readBlackChunk(Frame& frame)
+{
+  std::fill(frame.pixels,
+            frame.pixels+frame.rowstride*m_height, 0);
+}
+
+void Decoder::readCopyChunk(Frame& frame)
+{
+  assert(m_width == 320 && m_height == 200);
+  if (m_width == 320 && m_height == 200) {
+    for (int y=0; y<200; ++y) {
+      auto it = frame.pixels + y*frame.rowstride;
+      for (int x=0; x<320; ++x, ++it)
+        *it = m_file->read8();
+    }
+  }
+}
+
+void Decoder::readColorChunk(Frame& frame, bool oldColorChunk)
+{
+  int npackets = read16();
+
+  // For each packet
+  int i = 0;
+  while (npackets--) {
+    i += m_file->read8();       // Colors to skip
+
+    int colors = m_file->read8();
+    if (colors == 0)
+      colors = 256;
+
+    for (int j=0; j<colors; ++j) {
+      Color& color = frame.colormap[i+j];
+      color.r = m_file->read8();
+      color.g = m_file->read8();
+      color.b = m_file->read8();
+      if (oldColorChunk) {
+        color.r = 255 * int(color.r) / 63;
+        color.g = 255 * int(color.g) / 63;
+        color.b = 255 * int(color.b) / 63;
+      }
+    }
+  }
+}
+
+void Decoder::readBrunChunk(Frame& frame)
+{
+  for (int y=0; y<m_height; ++y) {
+    auto it = frame.pixels+frame.rowstride*y;
+    int x = 0;
+    int npackets = m_file->read8();
+    while (m_file->ok() && x < m_width) {
+      int count = int(int8_t(m_file->read8()));
+      if (count >= 0) {
+        uint8_t color = m_file->read8();
+        while (count-- != 0 && x < m_width) {
+          *it = color;
+          ++it;
+          ++x;
+        }
+      }
+      else {
+        while (count++ != 0) {
+          *it = m_file->read8();
+          ++it;
+          ++x;
+        }
+      }
+    }
+  }
+}
+
+void Decoder::readLcChunk(Frame& frame)
+{
+  int skipLines = read16();
+  int nlines = read16();
+
+  for (int y=skipLines; y<skipLines+nlines; ++y) {
+    auto it = frame.pixels+frame.rowstride*y;
+    int x = 0;
+    int npackets = m_file->read8();
+    while (npackets-- && x < m_width) {
+      int skip = m_file->read8();
+
+      x += skip;
+      it += skip;
+
+      int count = int(int8_t(m_file->read8()));
+      if (count >= 0) {
+        while (count-- != 0) {
+          *it = m_file->read8();
+          ++it;
+          ++x;
+        }
+      }
+      else {
+        uint8_t color = m_file->read8();
+        while (count++ != 0 && x < m_width) {
+          *it = color;
+          ++it;
+          ++x;
+        }
+      }
+    }
+  }
+}
+
+void Decoder::readDeltaChunk(Frame& frame)
+{
+  int nlines = read16();
+  int y = 0;
+  while (nlines-- != 0) {
+    int npackets = 0;
+
+    while (m_file->ok()) {
+      int16_t word = read16();
+      if (word < 0) {          // Has bit 15 (0x8000)
+        if (word & 0x4000) {   // Has bit 14 (0x4000)
+          y += -word;          // Skip lines
+        }
+        // Only last pixel has changed
+        else {
+          assert(y >= 0 && y < m_height);
+          if (y >= 0 && y < m_height) {
+            auto it = frame.pixels + y*frame.rowstride + m_width - 1;
+            *it = (word & 0xff);
+          }
+          ++y;
+          if (nlines-- == 0)
+            goto done;
+        }
+      }
+      else {
+        npackets = word;
+        break;
+      }
+    }
+
+    int x = 0;
+    while (npackets-- != 0) {
+      x += m_file->read8();           // Skip pixels
+      int8_t count = m_file->read8(); // Number of words
+
+      assert(y >= 0 && y < m_height &&
+             x >= 0 && x < m_width);
+      auto it = frame.pixels + y*frame.rowstride + x;
+
+      if (count >= 0) {
+        while (count-- != 0 && x < m_width) {
+          int color1 = m_file->read8();
+          int color2 = m_file->read8();
+
+          *it = color1;
+          ++it;
+          ++x;
+
+          if (x < m_width) {
+            *it = color2;
+            ++it;
+            ++x;
+          }
+        }
+      }
+      else {
+        int color1 = m_file->read8();
+        int color2 = m_file->read8();
+
+        while (count++ != 0 && x < m_width) {
+          *it = color1;
+          ++it;
+          ++x;
+
+          if (x < m_width) {
+            *it = color2;
+            ++it;
+            ++x;
+          }
+        }
+      }
+    }
+
+    ++y;
+  }
+done:;
+}
+
+uint16_t Decoder::read16()
+{
+  int b1 = m_file->read8();
+  int b2 = m_file->read8();
+
+  if (m_file->ok()) {
+    return ((b2 << 8) | b1); // Little endian
+  }
+  else
+    return 0;
+}
+
+uint32_t Decoder::read32()
+{
+  int b1 = m_file->read8();
+  int b2 = m_file->read8();
+  int b3 = m_file->read8();
+  int b4 = m_file->read8();
+
+  if (m_file->ok()) {
+    // Little endian
+    return ((b4 << 24) | (b3 << 16) | (b2 << 8) | b1);
+  }
+  else
+    return 0;
+}
+
+} // namespace flic
