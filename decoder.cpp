@@ -35,8 +35,12 @@ bool Decoder::readHeader(Header& header)
   header.depth  = read16();
   read32();                     // Skip flags
   header.speed = read16();
-  if (magic == FLI_MAGIC_NUMBER)
-    header.speed = 1000 * header.speed / 70;
+  if (magic == FLI_MAGIC_NUMBER) {
+    if (header.speed == 0)
+      header.speed = 70;
+    else
+      header.speed = 1000 * header.speed / 70;
+  }
 
   if (magic == FLC_MAGIC_NUMBER) {
     // Offset to the first and second frame
