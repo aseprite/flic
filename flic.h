@@ -162,7 +162,9 @@ namespace flic {
     int m_width, m_height;
     Colormap m_prevColormap;
     std::vector<uint8_t> m_prevFrameData;
-    bool m_firstFrame;
+    int m_frameCount;
+    int m_offsetFrame1;
+    int m_offsetFrame2;
   };
 
 } // namespace flic

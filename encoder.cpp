@@ -82,7 +82,9 @@ static int count_max_consecutive_equal_values(Iterator1 begin1, Iterator1 end1,
 
 Encoder::Encoder(FileInterface* file)
   : m_file(file)
-  , m_firstFrame(true)
+  , m_frameCount(0)
+  , m_offsetFrame1(0)
+  , m_offsetFrame2(0)
 {
 }
 
@@ -93,6 +95,10 @@ Encoder::~Encoder()
     uint32_t size = m_file->tell();
     m_file->seek(0);
     write32(size);
+
+    m_file->seek(80);
+    write32(m_offsetFrame1);
+    write32(m_offsetFrame2);
   }
 }
 
@@ -114,22 +120,25 @@ void Encoder::writeFrame(const Frame& frame)
   uint32_t frameStartPos = m_file->tell();
   int nchunks = 0;
 
+  switch (m_frameCount) {
+    case 0: m_offsetFrame1 = frameStartPos; break;
+    case 1: m_offsetFrame2 = frameStartPos; break;
+  }
+
   write32(0);           // Frame size will be written at the end of this function
   write16(0);           // Magic number
   write16(0);           // Number of chunks
   write32(0);           // Padding
   write32(0);
 
-  if (m_firstFrame || m_prevColormap != frame.colormap) {
+  if (m_frameCount == 0 || m_prevColormap != frame.colormap) {
     writeColorChunk(frame);
     ++nchunks;
   }
 
-  if (m_firstFrame) {
+  if (m_frameCount == 0) {
     writeBrunChunk(frame);
     ++nchunks;
-
-    m_firstFrame = false;
 
     // Create the buffer to store previous frame pixels
     m_prevFrameData.resize(m_height*frame.rowstride);
@@ -149,6 +158,7 @@ void Encoder::writeFrame(const Frame& frame)
   write16(nchunks);                     // Number of chunks
 
   m_file->seek(frameEndPos);
+  ++m_frameCount;
 }
 
 void Encoder::writeColorChunk(const Frame& frame)
@@ -163,10 +173,10 @@ void Encoder::writeColorChunk(const Frame& frame)
   int npackets = 0;
   int skip = 0;
   for (int i=0; i<256; ) {
-    if (m_firstFrame ||
+    if (m_frameCount == 0 ||
         m_prevColormap[i] != frame.colormap[i]) {
       int ncolors;
-      if (m_firstFrame) {
+      if (m_frameCount == 0) {
         ncolors = 256;
       }
       else {
