@@ -109,7 +109,7 @@ void Encoder::writeHeader(const Header& header)
   write16(header.frames);
   write16(m_width = header.width);
   write16(m_height = header.height);
-  write16(header.depth);
+  write16(8);
   write32(0);                // Flags
   write16(header.speed);
   m_file->seek(128);

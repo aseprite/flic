@@ -37,7 +37,6 @@ namespace flic {
     int frames;
     int width;
     int height;
-    int depth;
     int speed;
   };
 

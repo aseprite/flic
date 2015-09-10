@@ -32,7 +32,7 @@ bool Decoder::readHeader(Header& header)
   header.frames = read16();
   header.width  = read16();
   header.height = read16();
-  header.depth  = read16();
+  read16();                     // Color depth (it is interpreted as 8bpp anyway)
   read32();                     // Skip flags
   header.speed = read16();
   if (magic == FLI_MAGIC_NUMBER) {
