@@ -90,11 +90,14 @@ Encoder::Encoder(FileInterface* file)
 
 Encoder::~Encoder()
 {
-  // Write file size in the header
+  // Fill header information
   if (m_file->ok()) {
     uint32_t size = m_file->tell();
     m_file->seek(0);
-    write32(size);
+
+    write32(size);              // Write file size
+    write16(FLC_MAGIC_NUMBER);  // Always as FLC file
+    write16(m_frameCount);      // Number of frames
 
     m_file->seek(80);
     write32(m_offsetFrame1);
@@ -104,9 +107,9 @@ Encoder::~Encoder()
 
 void Encoder::writeHeader(const Header& header)
 {
-  write32(0);                // File size, to be completed in writeHeaderSize()
-  write16(FLC_MAGIC_NUMBER); // Always as FLC file
-  write16(header.frames);
+  write32(0);                // File size, to be completed in ~Encoder()
+  write16(0);                // File type
+  write16(0);                // Number of frames
   write16(m_width = header.width);
   write16(m_height = header.height);
   write16(8);
