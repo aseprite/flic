@@ -215,6 +215,10 @@ void Encoder::writeColorChunk(const Frame& frame)
   // Update chunk size
   size_t chunkEndPos = m_file->tell();
   m_file->seek(chunkBeginPos);
+
+  if ((chunkEndPos - chunkBeginPos) & 1) // Avoid odd chunk size
+    ++chunkEndPos;
+
   write32(chunkEndPos - chunkBeginPos); // Chunk size
   write16(FLI_COLOR_256_CHUNK);         // Chunk type
   write16(npackets);                    // Number of packets
@@ -236,6 +240,10 @@ void Encoder::writeBrunChunk(const Frame& frame)
   // Update chunk size
   size_t chunkEndPos = m_file->tell();
   m_file->seek(chunkBeginPos);
+
+  if ((chunkEndPos - chunkBeginPos) & 1) // Avoid odd chunk size
+    ++chunkEndPos;
+
   write32(chunkEndPos - chunkBeginPos);
   m_file->seek(chunkEndPos);
 }
@@ -348,6 +356,10 @@ secondScanDone:;
   // Update chunk size
   size_t chunkEndPos = m_file->tell();
   m_file->seek(chunkBeginPos);
+
+  if ((chunkEndPos - chunkBeginPos) & 1) // Avoid odd chunk size
+    ++chunkEndPos;
+
   write32(chunkEndPos - chunkBeginPos);
   m_file->seek(chunkEndPos);
 }
