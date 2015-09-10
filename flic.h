@@ -137,7 +137,9 @@ namespace flic {
 
     FileInterface* m_file;
     int m_width, m_height;
-    bool m_firstFrame;
+    int m_frameCount;
+    int m_offsetFrame1;
+    int m_offsetFrame2;
   };
 
   class Encoder {

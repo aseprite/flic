@@ -13,7 +13,9 @@ namespace flic {
 
 Decoder::Decoder(FileInterface* file)
   : m_file(file)
-  , m_firstFrame(true)
+  , m_frameCount(0)
+  , m_offsetFrame1(0)
+  , m_offsetFrame2(0)
 {
 }
 
@@ -36,6 +38,13 @@ bool Decoder::readHeader(Header& header)
   if (magic == FLI_MAGIC_NUMBER)
     header.speed = 1000 * header.speed / 70;
 
+  if (magic == FLC_MAGIC_NUMBER) {
+    // Offset to the first and second frame
+    m_file->seek(80);
+    m_offsetFrame1 = read32();
+    m_offsetFrame2 = read32();
+  }
+
   if (header.width == 0) header.width = 320;
   if (header.height == 0) header.width = 200;
 
@@ -49,6 +58,17 @@ bool Decoder::readHeader(Header& header)
 
 bool Decoder::readFrame(Frame& frame)
 {
+  switch (m_frameCount) {
+    case 0:
+      if (m_offsetFrame1)
+        m_file->seek(m_offsetFrame1);
+      break;
+    case 1:
+      if (m_offsetFrame2)
+        m_file->seek(m_offsetFrame2);
+      break;
+  }
+
   uint32_t frameStartPos = m_file->tell();
   uint32_t frameSize = read32();
   uint16_t magic = read16();
@@ -62,7 +82,7 @@ bool Decoder::readFrame(Frame& frame)
     readChunk(frame);
 
   m_file->seek(frameStartPos+frameSize);
-  m_firstFrame = false;
+  ++m_frameCount;
   return true;
 }
 
