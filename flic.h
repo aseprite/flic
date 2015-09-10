@@ -145,8 +145,14 @@ namespace flic {
   public:
     Encoder(FileInterface* file);
     ~Encoder();
+
     void writeHeader(const Header& header);
     void writeFrame(const Frame& frame);
+
+    // Must be called at the end with the first frame. It's required
+    // by Animator Pro to loop the animation from the last frame to
+    // the first one.
+    void writeRingFrame(const Frame& frame);
 
   private:
     void writeColorChunk(const Frame& frame);

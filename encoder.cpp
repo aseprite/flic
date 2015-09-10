@@ -161,6 +161,12 @@ void Encoder::writeFrame(const Frame& frame)
   ++m_frameCount;
 }
 
+void Encoder::writeRingFrame(const Frame& frame)
+{
+  writeFrame(frame);
+  --m_frameCount;
+}
+
 void Encoder::writeColorChunk(const Frame& frame)
 {
   // Chunk header
