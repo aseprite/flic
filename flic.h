@@ -8,8 +8,9 @@
 #define FLIC_FLIC_H_INCLUDED
 #pragma once
 
+#include <stdint.h>
+
 #include <cassert>
-#include <cstdint>
 #include <cstdio>
 #include <vector>
 
