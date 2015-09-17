@@ -21,7 +21,7 @@ Decoder::Decoder(FileInterface* file)
 
 bool Decoder::readHeader(Header& header)
 {
-  uint32_t fileSize = read32();
+  read32(); // file size
   uint16_t magic = read16();
 
   assert(magic == FLI_MAGIC_NUMBER || magic == FLC_MAGIC_NUMBER);
@@ -77,6 +77,7 @@ bool Decoder::readFrame(Frame& frame)
   uint32_t frameSize = read32();
   uint16_t magic = read16();
   assert(magic == FLI_FRAME_MAGIC_NUMBER);
+  (void)magic;
 
   uint16_t chunks = read16();
   for (int i=0; i<8; ++i)       // Padding
@@ -162,7 +163,7 @@ void Decoder::readBrunChunk(Frame& frame)
   for (int y=0; y<m_height; ++y) {
     auto it = frame.pixels+frame.rowstride*y;
     int x = 0;
-    int npackets = m_file->read8();
+    m_file->read8(); // Ignore number of packets (we read until x == m_width)
     while (m_file->ok() && x < m_width) {
       int count = int(int8_t(m_file->read8()));
       if (count >= 0) {
