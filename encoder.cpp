@@ -265,7 +265,7 @@ void Encoder::writeBrunLineChunk(const Frame& frame, int y)
   // Number of packets
   int npackets = 0;
 
-  auto it = frame.pixels + y*frame.rowstride;
+  uint8_t* it = frame.pixels + y*frame.rowstride;
   for (int x=0; x<m_width; ) {
     int remain = (m_width-x);
     uint8_t* maxSameStart = nullptr;
@@ -316,8 +316,9 @@ void Encoder::writeLcChunk(const Frame& frame)
 {
   int skipLines = 0;
   for (int y=0; y<m_height; ++y) {
-    auto prevIt = m_prevFrameData.begin() + y*frame.rowstride;
-    auto it = frame.pixels + y*frame.rowstride;
+    std::vector<uint8_t>::iterator prevIt =
+      m_prevFrameData.begin() + y*frame.rowstride;
+    uint8_t* it = frame.pixels + y*frame.rowstride;
 
     for (int x=0; x<m_width; ++x, ++it, ++prevIt) {
       if (*prevIt != *it)
@@ -331,8 +332,9 @@ firstScanDone:;
 
   int skipEndLines = 0;
   for (int y=m_height-1; y > skipLines; --y) {
-    auto prevIt = m_prevFrameData.begin() + y*frame.rowstride;
-    auto it = frame.pixels + y*frame.rowstride;
+    std::vector<uint8_t>::iterator prevIt =
+      m_prevFrameData.begin() + y*frame.rowstride;
+    uint8_t* it = frame.pixels + y*frame.rowstride;
 
     for (int x=0; x<m_width; ++x, ++it, ++prevIt) {
       if (*prevIt != *it)
@@ -382,8 +384,9 @@ void Encoder::writeLcLineChunk(const Frame& frame, int y)
   int npackets = 0;
   int skipPixels = 0;
 
-  auto prevIt = m_prevFrameData.begin() + y*frame.rowstride;
-  auto it = frame.pixels + y*frame.rowstride;
+  std::vector<uint8_t>::iterator prevIt =
+    m_prevFrameData.begin() + y*frame.rowstride;
+  uint8_t* it = frame.pixels + y*frame.rowstride;
 
   for (int x=0; x<m_width; ) {
     if (*prevIt != *it) {

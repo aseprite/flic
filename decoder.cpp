@@ -124,7 +124,7 @@ void Decoder::readCopyChunk(Frame& frame)
   assert(m_width == 320 && m_height == 200);
   if (m_width == 320 && m_height == 200) {
     for (int y=0; y<200; ++y) {
-      auto it = frame.pixels + y*frame.rowstride;
+      uint8_t* it = frame.pixels + y*frame.rowstride;
       for (int x=0; x<320; ++x, ++it)
         *it = m_file->read8();
     }
@@ -161,7 +161,7 @@ void Decoder::readColorChunk(Frame& frame, bool oldColorChunk)
 void Decoder::readBrunChunk(Frame& frame)
 {
   for (int y=0; y<m_height; ++y) {
-    auto it = frame.pixels+frame.rowstride*y;
+    uint8_t* it = frame.pixels+frame.rowstride*y;
     int x = 0;
     m_file->read8(); // Ignore number of packets (we read until x == m_width)
     while (m_file->ok() && x < m_width) {
@@ -191,7 +191,7 @@ void Decoder::readLcChunk(Frame& frame)
   int nlines = read16();
 
   for (int y=skipLines; y<skipLines+nlines; ++y) {
-    auto it = frame.pixels+frame.rowstride*y;
+    uint8_t* it = frame.pixels+frame.rowstride*y;
     int x = 0;
     int npackets = m_file->read8();
     while (npackets-- && x < m_width) {
@@ -237,7 +237,7 @@ void Decoder::readDeltaChunk(Frame& frame)
         else {
           assert(y >= 0 && y < m_height);
           if (y >= 0 && y < m_height) {
-            auto it = frame.pixels + y*frame.rowstride + m_width - 1;
+            uint8_t* it = frame.pixels + y*frame.rowstride + m_width - 1;
             *it = (word & 0xff);
           }
           ++y;
@@ -258,7 +258,7 @@ void Decoder::readDeltaChunk(Frame& frame)
 
       assert(y >= 0 && y < m_height &&
              x >= 0 && x < m_width);
-      auto it = frame.pixels + y*frame.rowstride + x;
+      uint8_t* it = frame.pixels + y*frame.rowstride + x;
 
       if (count >= 0) {
         while (count-- != 0 && x < m_width) {
