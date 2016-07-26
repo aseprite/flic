@@ -4,8 +4,8 @@
 // This file is released under the terms of the MIT license.
 // Read LICENSE.txt for more information.
 
-#include "flic/flic.h"
-#include "flic/flic_details.h"
+#include "flic.h"
+#include "flic_details.h"
 
 #include <cassert>
 
