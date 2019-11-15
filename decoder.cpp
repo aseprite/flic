@@ -1,4 +1,5 @@
 // Aseprite FLIC Library
+// Copyright (c) 2019 Igara Studio S.A.
 // Copyright (c) 2015 David Capello
 //
 // This file is released under the terms of the MIT license.
@@ -202,11 +203,15 @@ void Decoder::readLcChunk(Frame& frame)
 
       int count = int(int8_t(m_file->read8()));
       if (count >= 0) {
-        while (count-- != 0) {
+        uint8_t* end = frame.pixels+frame.rowstride*m_height;
+        while (count-- != 0 && it < end) {
           *it = m_file->read8();
           ++it;
           ++x;
         }
+        // Broken file? More bytes than available buffer
+        if (it == end)
+          return;
       }
       else {
         uint8_t color = m_file->read8();
