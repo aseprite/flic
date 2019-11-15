@@ -145,7 +145,11 @@ void Decoder::readColorChunk(Frame& frame, bool oldColorChunk)
     if (colors == 0)
       colors = 256;
 
-    for (int j=0; j<colors; ++j) {
+    for (int j=0; j<colors
+           // If i+j >= 256 it means that the color chunk is invalid,
+           // we check this to avoid an buffer overflow of frame.colormap[]
+           && i+j < 256;
+         ++j) {
       Color& color = frame.colormap[i+j];
       color.r = m_file->read8();
       color.g = m_file->read8();
