@@ -1,5 +1,5 @@
 // Aseprite FLIC Library
-// Copyright (c) 2019 Igara Studio S.A.
+// Copyright (c) 2019-2020 Igara Studio S.A.
 // Copyright (c) 2015 David Capello
 //
 // This file is released under the terms of the MIT license.
@@ -8,7 +8,8 @@
 #include "flic.h"
 #include "flic_details.h"
 
-#include <cassert>
+#undef assert
+#define assert(...)
 
 namespace flic {
 
@@ -51,7 +52,7 @@ bool Decoder::readHeader(Header& header)
   }
 
   if (header.width == 0) header.width = 320;
-  if (header.height == 0) header.width = 200;
+  if (header.height == 0) header.height = 200;
 
   m_width = header.width;
   m_height = header.height;
@@ -168,8 +169,8 @@ void Decoder::readBrunChunk(Frame& frame)
   for (int y=0; y<m_height; ++y) {
     uint8_t* it = frame.pixels+frame.rowstride*y;
     int x = 0;
-    m_file->read8(); // Ignore number of packets (we read until x == m_width)
-    while (m_file->ok() && x < m_width) {
+    int npackets = m_file->read8(); // Use the number of packet to check integrity
+    while (m_file->ok() && npackets-- != 0 && x < m_width) {
       int count = int(int8_t(m_file->read8()));
       if (count >= 0) {
         uint8_t color = m_file->read8();
@@ -180,7 +181,7 @@ void Decoder::readBrunChunk(Frame& frame)
         }
       }
       else {
-        while (count++ != 0) {
+        while (count++ != 0 && x < m_width) {
           *it = m_file->read8();
           ++it;
           ++x;
@@ -196,6 +197,10 @@ void Decoder::readLcChunk(Frame& frame)
   int nlines = read16();
 
   for (int y=skipLines; y<skipLines+nlines; ++y) {
+    // Break in case of invalid data
+    if (y < 0 || y >= m_height)
+      break;
+
     uint8_t* it = frame.pixels+frame.rowstride*y;
     int x = 0;
     int npackets = m_file->read8();
@@ -251,7 +256,7 @@ void Decoder::readDeltaChunk(Frame& frame)
           }
           ++y;
           if (nlines-- == 0)
-            goto done;
+            return;             // We are done
         }
       }
       else {
@@ -260,13 +265,16 @@ void Decoder::readDeltaChunk(Frame& frame)
       }
     }
 
+    // Avoid invalid data to skip more lines than the availables.
+    if (y >= m_height)
+      break;
+
     int x = 0;
     while (npackets-- != 0) {
       x += m_file->read8();           // Skip pixels
       int8_t count = m_file->read8(); // Number of words
 
-      assert(y >= 0 && y < m_height &&
-             x >= 0 && x < m_width);
+      assert(y >= 0 && y < m_height && x >= 0 && x < m_width);
       uint8_t* it = frame.pixels + y*frame.rowstride + x;
 
       if (count >= 0) {
@@ -305,7 +313,6 @@ void Decoder::readDeltaChunk(Frame& frame)
 
     ++y;
   }
-done:;
 }
 
 uint16_t Decoder::read16()
