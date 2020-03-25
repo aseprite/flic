@@ -3,6 +3,7 @@
 > Distributed under [MIT license](LICENSE.txt)
 
 Library to read/write [Animator Pro FLI/FLC files](https://en.wikipedia.org/wiki/FLIC_(file_format)).
+Tested with [libfuzzer](https://github.com/aseprite/fuzz).
 
 ## Read File Example
 
