@@ -1,6 +1,7 @@
 # Aseprite FLIC Library
 
-> Distributed under [MIT license](LICENSE.txt)
+[![build](https://github.com/aseprite/flic/actions/workflows/build.yml/badge.svg)](https://github.com/aseprite/flic/actions/workflows/build.yml)
+[![MIT Licensed](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.txt)
 
 Library to read/write [Animator Pro FLI/FLC files](https://en.wikipedia.org/wiki/FLIC_(file_format)).
 Tested with [libfuzzer](https://github.com/aseprite/fuzz).
