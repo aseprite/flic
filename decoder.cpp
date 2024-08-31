@@ -247,16 +247,14 @@ void Decoder::readDeltaChunk(Frame& frame)
         if (word & 0x4000) {   // Has bit 14 (0x4000)
           y += -word;          // Skip lines
         }
-        // Only last pixel has changed
+        // The last pixel of the current line has changed
+        // This code exists for animations with an odd column count. The changes at the other positions follow.
         else {
           assert(y >= 0 && y < m_height);
           if (y >= 0 && y < m_height) {
             uint8_t* it = frame.pixels + y*frame.rowstride + m_width - 1;
             *it = (word & 0xff);
           }
-          ++y;
-          if (nlines-- == 0)
-            return;             // We are done
         }
       }
       else {
