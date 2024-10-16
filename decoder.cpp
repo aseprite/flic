@@ -170,7 +170,8 @@ void Decoder::readBrunChunk(Frame& frame)
     uint8_t* it = frame.pixels+frame.rowstride*y;
     int x = 0;
     int npackets = m_file->read8(); // Use the number of packet to check integrity
-    while (m_file->ok() && npackets-- != 0 && x < m_width) {
+    (void)npackets; // to be ignored according to latest standard (holdover from the FLI format)
+    while (m_file->ok() && x < m_width) {
       int count = int(int8_t(m_file->read8()));
       if (count >= 0) {
         uint8_t color = m_file->read8();
