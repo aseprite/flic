@@ -124,6 +124,8 @@ namespace flic {
     bool readHeader(Header& header);
     bool readFrame(Frame& frame);
 
+    int getCurrentFrameCount() const { return m_frameCount; }
+
   private:
     void readChunk(Frame& frame);
     void readBlackChunk(Frame& frame);
